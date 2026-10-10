@@ -82,7 +82,17 @@ export function showAccessToast(msg) {
 }
 
 export function guard(permission) {
-    if (can(permission)) return true;
+    if (can(permission)) {
+        // Special case: Control Panel tab is strictly for 'admin' role, even if others have permissions
+        if (permission === "admin.panel") {
+            const u = currentUser();
+            if (!u || u.role !== 'admin') {
+                showAccessToast("Only Administrators can access the Control Panel.");
+                return false;
+            }
+        }
+        return true;
+    }
     const p = RBAC_CONFIG.permissions[permission];
     showAccessToast("Your role doesn't allow this" + (p ? " (" + p.label + ")" : "") + ".");
     return false;

@@ -18,6 +18,22 @@ import { guard, guardRoute, renderAccessUI } from './lib/auth-session.js';
 import { renderPerformanceTable } from './lib/coaching-trend.js';
 import { setCoachingDateTimeNow } from './lib/kpi-library.js';
 import { renderActionsList } from './lib/actions-management.js';
+
+// Attach to window instead of exporting
+window.RBAC_CONFIG = RBAC_CONFIG;
+window.RBAC_DEFAULT_ROLES = RBAC_DEFAULT_ROLES;
+window.RBAC_OVERRIDE_KEY = RBAC_OVERRIDE_KEY;
+window.createRbac = createRbac;
+window.SchemaCore = SchemaCore;
+window.UiRegistry = UiRegistry;
+window.isValidFieldContent = isValidFieldContent;
+window.escapeHtml = escapeHtml;
+window.guard = guard;
+window.guardRoute = guardRoute;
+window.renderAccessUI = renderAccessUI;
+window.renderPerformanceTable = renderPerformanceTable;
+window.setCoachingDateTimeNow = setCoachingDateTimeNow;
+window.renderActionsList = renderActionsList;
 import { renderEmployeeList, populateRoleOptions } from './lib/org-chart.js';
 
 // ============================================================

@@ -196,6 +196,7 @@
   display: none !important;
 }
 
-.rbac-hidden {
-  display: none !important;
-}
+.rbac-hidden { display: none !important; }
+
+.emp-admin-col { display: none !important; }
+.admin-view .emp-admin-col { display: table-cell !important; }

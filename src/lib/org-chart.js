@@ -211,6 +211,7 @@ export function renderEmployeeList() {
     body.innerHTML = "";
     rows.forEach(e => {
         const tr = document.createElement("tr");
+        const isAdmin = can("admin.panel");
         tr.innerHTML =
             '<td class="p-2 font-mono font-medium">' + escapeHtml(e.pid) + '</td>' +
             '<td class="p-2 font-medium">' + escapeHtml(e.name) + '</td>' +
@@ -218,13 +219,13 @@ export function renderEmployeeList() {
             '<td class="p-2">' + escapeHtml(e.teamLeader) + '</td>' +
             '<td class="p-2">' + escapeHtml(e.contractType) + (e.contractStatus ? '<div class="text-[10px] ' + (e.contractStatus === "Active" ? "text-emerald-700" : "text-amber-700") + '">' + escapeHtml(e.contractStatus) + '</div>' : '') + '</td>' +
             '<td class="p-2">' + escapeHtml(e.department || "—") + (e.subDepartment ? '<div class="text-[10px] text-slate-500">' + escapeHtml(e.subDepartment) + '</div>' : '') + '</td>' +
-            '<td class="p-2 whitespace-nowrap">' + escapeHtml(getRoleLabel(e.role) || "—") + '</td>' +
+            (isAdmin ? '<td class="p-2 whitespace-nowrap">' + escapeHtml(getRoleLabel(e.role) || "—") + '</td>' : '') +
             '<td class="p-2 whitespace-nowrap">' + escapeHtml(e.joinDate) + '</td>' +
             '<td class="p-2 whitespace-nowrap text-slate-600">Active Profile</td>' +
-            '<td class="p-2 text-right whitespace-nowrap">' +
+            (isAdmin ? '<td class="p-2 text-right whitespace-nowrap">' +
                 '<button type="button" onclick="editEmployee(\'' + e.pid + '\')" class="bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-medium px-3 py-1.5 rounded transition mr-1.5">Edit</button>' +
                 '<button type="button" onclick="deleteEmployee(\'' + e.pid + '\')" class="bg-red-600 hover:bg-red-700 text-white text-[11px] font-medium px-3 py-1.5 rounded transition">Delete</button>' +
-            '</td>';
+            '</td>' : '');
         body.appendChild(tr);
     });
 

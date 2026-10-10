@@ -205,7 +205,11 @@ export function renderEmployeeList() {
         .map(n => '<option value="' + escapeHtml(n) + '">').join("");
 
     const q = (document.getElementById("empSearchInput")?.value || "").trim().toLowerCase();
-    const rows = employeeRecords.filter(e => !q || [e.name, e.pid, e.email, e.teamLeader, e.department, e.subDepartment, e.contractStatus, getRoleLabel(e.role)].join(" ").toLowerCase().indexOf(q) !== -1)
+    const isAdmin = can("admin.panel");
+    const rows = employeeRecords.filter(e => {
+        if (!isAdmin && e.role === 'admin') return false;
+        return !q || [e.name, e.pid, e.email, e.teamLeader, e.department, e.subDepartment, e.contractStatus, getRoleLabel(e.role)].join(" ").toLowerCase().indexOf(q) !== -1;
+    })
         .slice().sort((a, b) => a.name.localeCompare(b.name));
 
     body.innerHTML = "";

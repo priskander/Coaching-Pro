@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COPC Agent Coaching & Performance Management</title>
+    <meta name="description" content="Standardized COPC CX coaching sheet generator, team performance dashboard, organizational chart, actions management, and disciplinary matrix governance." />
+    <meta property="og:title" content="COPC Agent Coaching & Performance Management" />
+    <meta property="og:description" content="Standardized COPC CX coaching sheet generator, team performance dashboard, organizational chart, actions management, and disciplinary matrix governance." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- External UI & Utility Libraries -->
+    <link rel="stylesheet" href="/src/index.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- Embedded Print & PDF Rules -->
+    <style>
+        @media print {
+            .no-print,
+            .instruction-hint,
+            .info-tooltip-wrap,
+            .tooltip-popup,
+            .pdf-exclude,
+            .help-text,
+            .btn-add-item,
+            [data-hint],
+            [role="tooltip"] {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+            }
+            .page-card {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            input, select, textarea {
+                border: none !important;
+                border-bottom: 1px solid #999 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                padding-left: 0 !important;
+            }
+            textarea {
+                resize: none;
+            }
+            .print-break-inside-avoid {
+                break-inside: avoid;
+            }
+        }
+        .pdf-export-mode .no-print,
+        .pdf-export-mode .instruction-hint,
+        .pdf-export-mode .info-tooltip-wrap,
+        .pdf-export-mode .tooltip-popup,
+        .pdf-export-mode .pdf-exclude,
+        .pdf-export-mode .help-text,
+        .pdf-export-mode .btn-add-item,
+        .pdf-export-mode button,
+        .pdf-export-mode [data-hint],
+        .pdf-export-mode [role="tooltip"] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .pdf-export-mode .pdf-swapped-out {
+            display: none !important;
+        }
+        .rbac-hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans p-4 md:p-8">
+
+    <!-- ===================== App Header: Profile Menu ===================== -->
+    <header id="appHeader" class="no-print sticky top-0 z-40 -mx-4 md:-mx-8 -mt-4 md:-mt-8 mb-4 md:mb-6 bg-white border-b border-slate-200 px-4 md:px-8 py-2.5 flex items-center justify-between shadow-xs">
+        <div class="flex items-center gap-3">
+            <span class="font-black text-slate-900 tracking-tight text-lg">Mina Project</span>
+            <span class="hidden sm:inline-block bg-teal-50 text-teal-800 text-[11px] font-semibold px-2 py-0.5 rounded border border-teal-200">COPC CX Release 7.0</span>
+        </div>
+        <div id="profileMenuRoot" class="relative hidden">
+            <button id="profileMenuBtn" type="button" onclick="toggleProfileMenu()" aria-haspopup="menu" aria-expanded="false" aria-controls="profileMenu"
+                class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 transition">
+                <span id="profileAvatar" class="inline-flex"></span>
+                <span class="hidden sm:flex flex-col items-start leading-tight text-left">
+                    <span id="profileName" class="text-sm font-semibold text-slate-900"></span>
+                    <span id="profileRole" class="text-[11px] text-teal-700 font-medium"></span>
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+            </button>
+            <div id="profileMenu" role="menu" aria-label="Account menu" class="hidden absolute right-0 mt-2 w-80 max-w-[92vw] bg-white rounded-xl shadow-xl border border-slate-200 text-sm overflow-hidden z-50"></div>
+        </div>
+    </header>
+
+    <div id="setupBanner" class="hidden no-print max-w-4xl mx-auto mb-4 bg-amber-50 border border-amber-300 text-amber-900 text-xs px-4 py-2.5 rounded-lg">
+        <span class="font-semibold">Setup mode.</span> No Administrator profile exists yet, so everyone has full access. Add an employee with the Administrator role in the Organizational Chart to switch access control on.
+    </div>
+
+    <!-- Sign-in Overlay (shown when access control is active and nobody is signed in) -->
+    <div id="authOverlay" class="hidden no-print fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-xs items-center justify-center p-4">
+        <form onsubmit="return submitSignIn(event)" novalidate class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-sm p-6 space-y-4">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">Sign in to Mina Project</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Use your PID and the email on your employee profile.</p>
+            </div>
+            <div>
+                <label for="signInPid" class="block text-xs font-semibold text-slate-700 mb-1">PID</label>
+                <input id="signInPid" type="text" autocomplete="username" placeholder="e.g. EMP-10923" class="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+            <div>
+                <label for="signInEmail" class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                <input id="signInEmail" type="email" autocomplete="email" placeholder="e.g. agent@company.com" class="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+            <p id="signInError" role="alert" class="text-xs text-red-600 min-h-[16px]"></p>
+            <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition shadow-sm">Sign in</button>
+            <p class="text-[11px] text-slate-400 text-center">Session is preserved locally on this device.</p>
+        </form>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" role="dialog" aria-modal="true" aria-labelledby="editProfileTitle" class="no-print fixed inset-0 bg-slate-900/60 z-[70] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 id="editProfileTitle" class="text-lg font-bold text-slate-900">Edit Profile</h2>
+            <div class="flex items-center gap-4">
+                <span id="editProfileAvatar" class="inline-flex"></span>
+                <div class="flex flex-col gap-2">
+                    <input type="file" id="editProfilePhotoInput" accept="image/*" class="hidden" onchange="pickProfilePhoto(event)">
+                    <button type="button" onclick="document.getElementById('editProfilePhotoInput').click()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-3 py-1.5 rounded transition">Upload photo</button>
+                    <button type="button" onclick="removeProfilePhoto()" class="text-xs text-slate-500 hover:text-red-600 text-left">Remove photo</button>
+                </div>
+            </div>
+            <div data-ui="ui.profile.fld.editprofilename">
+                <label for="editProfileName" class="block text-xs font-semibold text-slate-700 mb-1">Display name</label>
+                <input id="editProfileName" type="text" maxlength="60" oninput="renderEditProfilePreview()" class="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500">
+                <p class="text-[11px] text-slate-400 mt-1">Leave blank to use your profile name.</p>
+            </div>
+            <p id="editProfileOrgInfo" class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2"></p>
+            <p id="editProfileError" role="alert" class="text-xs text-red-600 min-h-[14px]"></p>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeEditProfileModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="button" onclick="saveOwnProfile()" class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===================== 1. Coaching Sheets Tab ===================== -->
+    <div id="coachingFormTab" class="hidden">
+
+        <!-- Action Bar / Header Controls -->
+        <div class="max-w-4xl mx-auto mb-6 flex flex-wrap justify-between items-center gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">COPC Coaching Sheet Generator</h1>
+                <p class="text-xs text-slate-500">Standardized agent evaluation, performance trending, and SMART development governance.</p>
+            </div>
+            <div class="flex flex-wrap gap-2.5">
+                <button data-perm="coaching.view" onclick="openAgentSelectModal()" class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Select Agents</button>
+                <button data-perm="dashboard.view" onclick="showTeamDashboardTab()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Team Dashboard
+                </button>
+                <button data-perm="actions.view" onclick="showActionsTab()" class="bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Actions Management
+                </button>
+                <button data-perm="employees.view" onclick="showOrgChartTab()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Org Chart</button>
+                <button data-perm="admin.panel" onclick="showControlPanelTab()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Control Panel</button>
+                <button data-perm="config.edit" onclick="openKpiModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    KPI Library
+                </button>
+                <button data-perm="data.import" onclick="openPerfImportModal()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    Import Monthly Data
+                </button>
+                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                </button>
+                <button data-perm="coaching.export" id="savePdfBtn" onclick="saveToPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span id="savePdfBtnLabel">Save to PDF</span>
+                </button>
+                <button data-perm="coaching.edit" id="sendEmailBtn" onclick="sendEmailWithForm()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span id="sendEmailBtnLabel">Send Email</span>
+                </button>
+                <button data-perm="coaching.edit" onclick="document.getElementById('coachingForm').reset(); setCoachingDateTimeNow(); const pc = document.querySelector('[data-field=\'perfComments\']'); if (pc) pc.style.height = '';" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-3.5 py-2 rounded-lg transition">
+                    Reset Form
+                </button>
+            </div>
+        </div>
+
+        <!-- Viewing Selected Agents Bar -->
+        <div id="viewSelectedBar" class="max-w-4xl mx-auto mb-4 no-print hidden">
+            <div class="bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-medium px-4 py-2.5 rounded-lg flex items-center justify-between gap-3 flex-wrap shadow-xs">
+                <span id="viewSelectedCounter" class="font-semibold">1 of 1</span>
+                <div class="flex items-center gap-2">
+                    <button id="viewSelectedPrevBtn" onclick="viewSelectedPrev()" class="bg-white border border-indigo-300 hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed text-indigo-700 text-xs font-medium px-3 py-1.5 rounded transition">&larr; Previous</button>
+                    <button id="viewSelectedNextBtn" onclick="viewSelectedNext()" class="bg-white border border-indigo-300 hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed text-indigo-700 text-xs font-medium px-3 py-1.5 rounded transition">Next &rarr;</button>
+                    <button onclick="exitViewSelectedAndReturnToList()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1.5 rounded transition">Back to List</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Performance Import Status Banner -->
+        <div id="perfDataBanner" class="max-w-4xl mx-auto mb-4 no-print hidden">
+            <div class="bg-teal-50 border border-teal-200 text-teal-800 text-xs font-medium px-4 py-2.5 rounded-lg flex items-center justify-between gap-3 shadow-xs">
+                <span id="perfDataBannerText"></span>
+                <button data-perm="data.import" onclick="openPerfImportModal()" class="text-teal-700 underline font-semibold hover:text-teal-900 whitespace-nowrap">Re-import</button>
+            </div>
+        </div>
+
+        <!-- Main Printable Coaching Form Document -->
+        <form id="coachingForm" class="page-card max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl shadow-md border border-slate-200 space-y-6">
+
+            <!-- Document Header -->
+            <div data-ui="ui.coaching.sec.form_header_title_doc_id_version" class="border-b-2 border-slate-800 pb-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <span class="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded border border-blue-200 mb-1">COPC CX Standard Standardized Tool</span>
+                    <h2 class="text-2xl font-black text-slate-900 tracking-tight uppercase">Agent Coaching Session Form</h2>
+                    <p class="text-xs text-slate-500">Quality Management &amp; Performance Improvement Governance</p>
+                </div>
+                <div class="text-left md:text-right text-xs text-slate-600 space-y-0.5 font-mono">
+                    <p><span class="font-bold font-sans">Doc ID:</span> COPC-TL-COACH-001</p>
+                    <p><span class="font-bold font-sans">Version:</span> 2.1</p>
+                    <p><span class="font-bold font-sans">Standard:</span> COPC CX Standard Release 7.0</p>
+                </div>
+            </div>
+
+            <!-- 1. General Info -->
+            <section data-ui="ui.coaching.sec.general_information_metadata" class="space-y-3">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-900 bg-blue-50 p-2 rounded border-l-4 border-blue-600">
+                    1. General Information &amp; Metadata
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Agent Full Name</label>
+                        <input type="text" data-field="agentName" list="coachingAgentNameList" onchange="onCoachingAgentNameChange(this.value)" placeholder="John Doe" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Agent Performance ID</label>
+                        <input type="text" data-field="agentId" placeholder="EMP-10923" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Team Leader Name</label>
+                        <input type="text" data-field="teamLeader" placeholder="Jane Smith" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">LOB / Campaign / Queue</label>
+                        <input type="text" data-field="lob" placeholder="Inbound Billing / Tech Support" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Coaching Date &amp; Time</label>
+                        <input type="datetime-local" id="coachingDateTime" data-field="coachingDateTime" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div data-ui="ui.coaching.fld.coaching_location_channel">
+                        <label class="block font-semibold text-slate-700 mb-1">Coaching Location / Channel</label>
+                        <select class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option>In-Person Meeting Room</option>
+                            <option>MS Teams / Virtual</option>
+                            <option>On-Floor Side-by-Side</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Review Year</label>
+                        <input type="text" id="perfReviewYear" data-field="perfReviewYear" placeholder="e.g. 2026" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div data-ui="ui.coaching.fld.session_type" class="pt-2">
+                    <label class="block font-semibold text-xs text-slate-700 mb-1">Session Type:</label>
+                    <div class="flex flex-wrap gap-4 text-xs">
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="session_type" class="text-blue-600 focus:ring-blue-500">
+                            <span>Scheduled Routine</span>
+                        </label>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="session_type" class="text-blue-600 focus:ring-blue-500">
+                            <span>Quality Follow-Up</span>
+                        </label>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="session_type" class="text-blue-600 focus:ring-blue-500">
+                            <span>Performance Improvement (PIP)</span>
+                        </label>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="session_type" class="text-blue-600 focus:ring-blue-500">
+                            <span>Onboarding / Nesting</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Monthly Performance Trend & Development Plan -->
+            <section data-ui="ui.coaching.sec.monthly_performance_trend_development_pl" class="space-y-4 print-break-inside-avoid border-t-2 border-slate-800 pt-5">
+                <div class="flex items-center justify-between bg-teal-50 p-2 rounded border-l-4 border-teal-600">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-teal-900 flex items-center">
+                        <span>2. Monthly Performance Trend &amp; Development Plan</span>
+                        <!-- Clean Interactive Hover/Focus Tooltip Icon -->
+                        <span class="info-tooltip-wrap ml-2 no-print pdf-exclude">
+                            <button type="button" class="info-tooltip-btn" aria-label="About Monthly Trend Table" tabindex="0">i</button>
+                            <span role="tooltip" class="tooltip-popup">
+                                Mirrors the "Paste Performance Here" tab of the COPC Monthly Coaching workbook. Any score below 3 is highlighted, and the Total row counts months below target. Strength Points (Total=0) and Development Areas (&lt;3 in latest cycle, ranked by Weight) are dynamically derived.
+                            </span>
+                        </span>
+                    </h3>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[11px] text-left border-collapse border border-slate-300 table-fixed">
+                        <thead class="bg-slate-100 text-slate-800 font-bold uppercase border-b border-slate-300">
+                            <tr id="perfTableHeadRow">
+                                <th class="p-1.5 border border-slate-300 break-words" style="width:10%">Month</th>
+                            </tr>
+                        </thead>
+                        <tbody id="perfTableBody" class="divide-y divide-slate-200">
+                            <!-- Rows rendered dynamically by renderPerformanceTable() -->
+                        </tbody>
+                        <tfoot>
+                            <tr id="perfCountRow" class="bg-slate-50 font-bold">
+                                <td class="p-1.5 border border-slate-300" title="Total number of months scoring below 3 for this metric">Total</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_reached">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_callback">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_sales">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_openSR">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_critical">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_nonCritical">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_srCreation">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_staffTime">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_tardiness">0</td>
+                                <td class="p-1.5 border border-slate-300 text-center" id="perfCount_what">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Strength Points & Development Areas (Dynamic Field Visibility - Dashed/Empty Hidden) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 text-xs">
+                    <div data-ui="ui.coaching.fld.strength_points" class="bg-slate-50/60 p-3.5 rounded-lg border border-slate-200">
+                        <label class="flex items-center justify-between font-bold text-slate-800 mb-2">
+                            <span class="flex items-center">
+                                Strength Points
+                                <span class="info-tooltip-wrap ml-1.5 no-print pdf-exclude">
+                                    <button type="button" class="info-tooltip-btn" aria-label="About Strength Points" tabindex="0">i</button>
+                                    <span role="tooltip" class="tooltip-popup">
+                                        Auto-populated: KPIs with a Total of 0 (never scored below 3 all year). Empty or dashed items are automatically hidden.
+                                    </span>
+                                </span>
+                            </span>
+                            <span class="text-[10px] font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 no-print pdf-exclude">Active Strengths</span>
+                        </label>
+                        <div id="strengthPointsList" class="space-y-2"></div>
+                    </div>
+
+                    <div data-ui="ui.coaching.fld.development_areas" class="bg-slate-50/60 p-3.5 rounded-lg border border-slate-200">
+                        <label class="flex items-center justify-between font-bold text-slate-800 mb-2">
+                            <span class="flex items-center">
+                                Development Areas
+                                <span class="info-tooltip-wrap ml-1.5 no-print pdf-exclude">
+                                    <button type="button" class="info-tooltip-btn" aria-label="About Development Areas" tabindex="0">i</button>
+                                    <span role="tooltip" class="tooltip-popup">
+                                        Auto-populated: KPIs missed in the latest month, prioritized by KPI Library Weight. Empty or dashed items are automatically hidden.
+                                    </span>
+                                </span>
+                            </span>
+                            <span class="text-[10px] font-normal text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 no-print pdf-exclude">Target Gaps</span>
+                        </label>
+                        <div id="developmentAreasList" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- Coaching Notes (SMART) -->
+                <div class="text-xs space-y-2 pt-2" id="coachingNotesSection">
+                    <div class="flex items-center justify-between no-print pdf-exclude mb-1">
+                        <span class="font-bold text-slate-700 flex items-center">
+                            Coaching Notes (SMART Action Guidance)
+                            <span class="info-tooltip-wrap ml-1.5 no-print pdf-exclude">
+                                <button type="button" class="info-tooltip-btn" aria-label="About Coaching Notes" tabindex="0">i</button>
+                                <span role="tooltip" class="tooltip-popup">
+                                    Auto-filled from the Manage KPI Library based on active Development Areas above. You can customize the wording directly in the notes column.
+                                </span>
+                            </span>
+                        </span>
+                    </div>
+                    <div id="coachingNotesList"></div>
+                </div>
+
+                <!-- Development Areas Report: Justification & Next Steps -->
+                <div class="text-xs space-y-2 pt-2" id="daReportSection">
+                    <div class="flex items-center font-bold text-slate-700">
+                        <span>Development Areas — Justification &amp; Next Steps</span>
+                        <span class="info-tooltip-wrap ml-1.5 no-print pdf-exclude">
+                            <button type="button" class="info-tooltip-btn" aria-label="About Justification Report" tabindex="0">i</button>
+                            <span role="tooltip" class="tooltip-popup">
+                                Auto-generated analysis: explains why each development area was flagged, variance vs target, and recommended action steps from the KPI library.
+                            </span>
+                        </span>
+                    </div>
+                    <div id="daReportList" class="space-y-2"></div>
+                </div>
+
+                <!-- Comments -->
+                <div class="text-xs space-y-2 pt-2">
+                    <label class="block font-semibold text-slate-700">Comments:</label>
+                    <textarea rows="2" data-field="perfComments" oninput="autoGrowTextarea(this)" placeholder="Additional performance coaching comments..." class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-teal-500 outline-none resize-none overflow-hidden"></textarea>
+                </div>
+
+                <!-- Additional Information: Custom fields defined in Control Panel -->
+                <div id="coachingCustomWrap" class="text-xs space-y-2 pt-2 hidden">
+                    <label class="block font-semibold text-slate-700">Additional Information</label>
+                    <p id="coachingCustomNote" class="text-[11px] text-slate-500 no-print instruction-hint pdf-exclude"></p>
+                    <div id="coachingCustomFields" class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1"></div>
+                </div>
+            </section>
+
+            <!-- 3. Metrics Overview -->
+            <section data-ui="ui.coaching.sec.performance_metric_overview_copc_alignme" class="space-y-3 print-break-inside-avoid">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-900 bg-blue-50 p-2 rounded border-l-4 border-blue-600">
+                    3. Performance &amp; Metric Overview (COPC Alignment)
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse border border-slate-300">
+                        <thead class="bg-slate-100 text-slate-800 font-bold uppercase border-b border-slate-300">
+                            <tr>
+                                <th data-ui="ui.coaching.col.performance_metric_overvie.metric_category" class="p-2 border border-slate-300">Metric Category</th>
+                                <th data-ui="ui.coaching.col.performance_metric_overvie.metric_name" class="p-2 border border-slate-300">Metric Name</th>
+                                <th data-ui="ui.coaching.col.performance_metric_overvie.threshold" class="p-2 border border-slate-300">Threshold</th>
+                                <th data-ui="ui.coaching.col.performance_metric_overvie.target" class="p-2 border border-slate-300">Target</th>
+                                <th data-ui="ui.coaching.col.performance_metric_overvie.exceptional" class="p-2 border border-slate-300">Exceptional</th>
+                                <th data-ui="ui.coaching.col.performance_metric_overvie.actual_score" class="p-2 border border-slate-300">Actual Score</th>
+                                <th data-ui="ui.coaching.col.performance_metric_overvie.status" class="p-2 border border-slate-300 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metricsTableBody" class="divide-y divide-slate-200">
+                            <!-- Rows rendered dynamically from the KPI Library -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. Interaction Details -->
+            <section data-ui="ui.coaching.sec.observed_interaction_transaction_details" class="space-y-3 print-break-inside-avoid">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-900 bg-blue-50 p-2 rounded border-l-4 border-blue-600">
+                    4. Observed Interaction / Transaction Details
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div data-ui="ui.coaching.fld.interaction_ticket_call_id">
+                        <label class="block font-semibold text-slate-700 mb-1">Interaction / Ticket / Call ID</label>
+                        <input type="text" placeholder="TICKET-982341" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div data-ui="ui.coaching.fld.channel">
+                        <label class="block font-semibold text-slate-700 mb-1">Channel</label>
+                        <select class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option>Voice Call</option>
+                            <option>Live Chat</option>
+                            <option>Email / Ticket</option>
+                            <option>Social Media</option>
+                        </select>
+                    </div>
+                    <div data-ui="ui.coaching.fld.evaluation_date">
+                        <label class="block font-semibold text-slate-700 mb-1">Evaluation Date</label>
+                        <input type="date" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+                <div data-ui="ui.coaching.fld.customer_issue_summary_scenario_context" class="text-xs">
+                    <label class="block font-semibold text-slate-700 mb-1">Customer Issue Summary / Scenario Context</label>
+                    <textarea rows="2" placeholder="Describe customer query and transaction scenario..." class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+            </section>
+
+            <!-- 5. Strengths -->
+            <section data-ui="ui.coaching.sec.key_strengths_positive_behaviors" class="space-y-3 print-break-inside-avoid">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-900 bg-emerald-50 p-2 rounded border-l-4 border-emerald-600">
+                    5. Key Strengths &amp; Positive Behaviors
+                </h3>
+                <div data-ui="ui.coaching.fld.observed_positive_practice_business_impa" class="text-xs space-y-2">
+                    <label class="block font-semibold text-slate-700">Observed Positive Practice &amp; Business Impact:</label>
+                    <textarea rows="2" placeholder="Highlight what the agent did well (e.g., strong empathy, proactive verification, efficient KB usage)..." class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
+                </div>
+            </section>
+
+            <!-- 6. Opportunity Areas & Behavior Analysis -->
+            <section data-ui="ui.coaching.sec.gap_analysis_behavior_identification" class="space-y-3 print-break-inside-avoid">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-900 bg-amber-50 p-2 rounded border-l-4 border-amber-600">
+                    6. Gap Analysis &amp; Behavior Identification
+                </h3>
+                <div class="space-y-3 text-xs">
+                    <div data-ui="ui.coaching.fld.observed_behavior_what_was_actually_done">
+                        <label class="block font-semibold text-slate-700 mb-1">Observed Behavior (What was actually done/said):</label>
+                        <textarea rows="2" placeholder="e.g. Agent skipped secondary authentication before changing account email address..." class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+                    </div>
+                    <div data-ui="ui.coaching.fld.expected_standard_sop_requirement">
+                        <label class="block font-semibold text-slate-700 mb-1">Expected Standard / SOP Requirement:</label>
+                        <textarea rows="2" placeholder="e.g. SOP Section 4.2 requires two-factor verification prior to updating sensitive account parameters..." class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+                    </div>
+                    <div data-ui="ui.coaching.fld.impact_on_customer_metric_business">
+                        <label class="block font-semibold text-slate-700 mb-1">Impact on Customer / Metric / Business:</label>
+                        <textarea rows="1" placeholder="e.g. Caused security critical error fatality, risk to customer data integrity..." class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. COPC Root Cause Analysis -->
+            <section data-ui="ui.coaching.sec.copc_root_cause_analysis_rca" class="space-y-3 print-break-inside-avoid">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-purple-900 bg-purple-50 p-2 rounded border-l-4 border-purple-600">
+                    7. COPC Root Cause Analysis (RCA)
+                </h3>
+                <div data-ui="ui.coaching.fld.rca" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <label class="p-2.5 border border-slate-200 rounded flex items-start gap-2 cursor-pointer hover:bg-slate-50">
+                        <input type="radio" name="rca" class="mt-0.5 text-purple-600 focus:ring-purple-500">
+                        <div>
+                            <span class="font-bold text-slate-800">Skill / Knowledge Gap</span>
+                            <p class="text-slate-500 text-[11px]">Lack of understanding of SOP, inadequate training, or unfamiliarity with KB tool.</p>
+                        </div>
+                    </label>
+                    <label class="p-2.5 border border-slate-200 rounded flex items-start gap-2 cursor-pointer hover:bg-slate-50">
+                        <input type="radio" name="rca" class="mt-0.5 text-purple-600 focus:ring-purple-500">
+                        <div>
+                            <span class="font-bold text-slate-800">Will / Motivation Gap</span>
+                            <p class="text-slate-500 text-[11px]">Agent possesses full knowledge but failed to follow process due to speed or attention.</p>
+                        </div>
+                    </label>
+                    <label class="p-2.5 border border-slate-200 rounded flex items-start gap-2 cursor-pointer hover:bg-slate-50">
+                        <input type="radio" name="rca" class="mt-0.5 text-purple-600 focus:ring-purple-500">
+                        <div>
+                            <span class="font-bold text-slate-800">Process / System Gap</span>
+                            <p class="text-slate-500 text-[11px]">KB article was outdated, tooling slow, or SOP instruction ambiguous/conflicting.</p>
+                        </div>
+                    </label>
+                    <label class="p-2.5 border border-slate-200 rounded flex items-start gap-2 cursor-pointer hover:bg-slate-50">
+                        <input type="radio" name="rca" class="mt-0.5 text-purple-600 focus:ring-purple-500">
+                        <div>
+                            <span class="font-bold text-slate-800">External / Unforeseen Factor</span>
+                            <p class="text-slate-500 text-[11px]">System outage, vendor side issue, or unique complex edge case.</p>
+                        </div>
+                    </label>
+                </div>
+                <div data-ui="ui.coaching.fld.rca_qualitative_notes" class="text-xs">
+                    <label class="block font-semibold text-slate-700 mb-1">RCA Qualitative Notes:</label>
+                    <input type="text" placeholder="Additional findings from joint discussion..." class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+            </section>
+
+            <!-- 8. SMART Action Plan -->
+            <section data-ui="ui.coaching.sec.smart_action_plan" class="space-y-3 print-break-inside-avoid">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-900 bg-blue-50 p-2 rounded border-l-4 border-blue-600">
+                    8. SMART Action Plan
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse border border-slate-300">
+                        <thead class="bg-slate-100 text-slate-800 font-bold uppercase border-b border-slate-300">
+                            <tr>
+                                <th data-ui="ui.coaching.col.smart_action_plan.item" class="p-2 border border-slate-300 w-8 text-center">#</th>
+                                <th data-ui="ui.coaching.col.smart_action_plan.action_item_specific_actionable" class="p-2 border border-slate-300">Action Item (Specific &amp; Actionable)</th>
+                                <th data-ui="ui.coaching.col.smart_action_plan.metric_impacted" class="p-2 border border-slate-300">Metric Impacted</th>
+                                <th data-ui="ui.coaching.col.smart_action_plan.owner" class="p-2 border border-slate-300">Owner</th>
+                                <th data-ui="ui.coaching.col.smart_action_plan.due_date" class="p-2 border border-slate-300">Due Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr>
+                                <td class="p-2 border border-slate-300 text-center font-bold">1</td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Re-read KB Article #1042 on security protocols" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Quality / Fatal Error" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Agent" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="date" class="w-full border border-slate-300 rounded px-1 py-1 outline-none"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-300 text-center font-bold">2</td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Shadow Senior Agent on 3 live escalation calls" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="AHT & Quality" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Agent / TL" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="date" class="w-full border border-slate-300 rounded px-1 py-1 outline-none"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-300 text-center font-bold">3</td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Perform 1-on-1 side-by-side audit on 3 live calls" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Quality Score" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="text" placeholder="Team Leader" class="w-full border border-slate-300 rounded px-2 py-1 outline-none"></td>
+                                <td class="p-2 border border-slate-300"><input type="date" class="w-full border border-slate-300 rounded px-1 py-1 outline-none"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 9. Agent Feedback & Commitments -->
+            <section data-ui="ui.coaching.sec.agent_feedback_self_commitment" class="space-y-3 print-break-inside-avoid">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-900 bg-blue-50 p-2 rounded border-l-4 border-blue-600">
+                    9. Agent Feedback &amp; Self-Commitment
+                </h3>
+                <div data-ui="ui.coaching.fld.agent_key_takeaways_commitments" class="text-xs space-y-2">
+                    <label class="block font-semibold text-slate-700">Agent Key Takeaways &amp; Commitments:</label>
+                    <textarea rows="2" placeholder="Record agent's own words regarding key learnings and next shift commitment..." class="w-full border border-slate-300 rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+            </section>
+
+            <!-- 10. Sign-off & Follow-Up Governance -->
+            <section data-ui="ui.coaching.sec.governance_verification_sign_off" class="space-y-4 print-break-inside-avoid border-t border-slate-200 pt-4">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900">
+                    10. Governance &amp; Verification Sign-Off
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-slate-50 p-3 rounded border border-slate-200">
+                    <div data-ui="ui.coaching.fld.follow_up_audit_session_date">
+                        <label class="block font-semibold text-slate-700 mb-1">Follow-Up Audit / Session Date:</label>
+                        <input type="date" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    </div>
+                    <div data-ui="ui.coaching.fld.target_expected_score_outcome">
+                        <label class="block font-semibold text-slate-700 mb-1">Target Expected Score / Outcome:</label>
+                        <input type="text" placeholder="e.g. Achieve ≥ 88% Quality on next 5 calls" class="w-full border border-slate-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 text-xs">
+                    <div class="space-y-2 border-t border-slate-300 pt-2">
+                        <div class="flex justify-between">
+                            <span class="font-bold text-slate-700">Agent Signature</span>
+                            <span class="text-slate-400">Date: ____________</span>
+                        </div>
+                        <div class="h-10 border-b border-dashed border-slate-300"></div>
+                    </div>
+                    <div class="space-y-2 border-t border-slate-300 pt-2">
+                        <div class="flex justify-between">
+                            <span class="font-bold text-slate-700">Team Leader Signature</span>
+                            <span class="text-slate-400">Date: ____________</span>
+                        </div>
+                        <div class="h-10 border-b border-dashed border-slate-300"></div>
+                    </div>
+                </div>
+            </section>
+
+        </form>
+
+    </div>
+    <!-- =================== End Coaching Form Tab =================== -->
+
+
+    <!-- ===================== 2. Team Performance Dashboard Tab ===================== -->
+    <div id="teamDashboardTab" class="max-w-5xl mx-auto space-y-5">
+
+        <!-- Dashboard Header / Nav -->
+        <div class="flex flex-wrap justify-between items-center gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Team Performance Dashboard</h1>
+                <p class="text-xs text-slate-500">Cross-team analytics, variance identification, top achievers and outlier tracking.</p>
+            </div>
+            <div class="flex flex-wrap gap-2.5">
+                <button data-perm="employees.view" onclick="showOrgChartTab()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Org Chart</button>
+                <button data-perm="admin.panel" onclick="showControlPanelTab()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Control Panel</button>
+                <button data-perm="config.edit" onclick="openKpiModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">KPI Library</button>
+                <button data-perm="data.import" onclick="openPerfImportModal()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Import Monthly Data</button>
+                <button data-perm="coaching.view" onclick="openAgentSelectModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Coaching Sheets</button>
+                <button data-perm="actions.view" onclick="showActionsTab()" class="bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Actions Management</button>
+                <button data-perm="config.edit" onclick="openMatrixModal()" class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Disciplinary Matrix</button>
+                <button data-perm="admin.reset" onclick="openDeleteDbModal()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">Delete Database</button>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 md:p-10 rounded-xl shadow-md border border-slate-200 space-y-6">
+            <div class="px-0 py-0 space-y-5">
+                <!-- Empty state -->
+                <div id="teamDashboardEmptyState" class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
+                    <p class="text-sm text-slate-600 font-medium mb-1">No performance data loaded yet.</p>
+                    <p class="text-xs text-slate-500 mb-4">Upload the coaching workbook's "Paste Performance Here" tab via Import Monthly Data in the Coaching Sheets tab.</p>
+                    <button data-perm="data.import" onclick="goToImportMonthlyPerformance()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-xs">
+                        Go to Import Monthly Performance
+                    </button>
+                </div>
+
+                <p id="teamDashboardSuccess" class="text-xs text-emerald-700 hidden"></p>
+
+                <!-- Results -->
+                <div id="teamDashboardResults" class="hidden space-y-6">
+
+                    <!-- 1. Team Performance Analysis -->
+                    <div data-ui="ui.dashboard.sec.team_performance_analysis">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-900 bg-emerald-50 p-2 rounded border-l-4 border-emerald-600 mb-2">Team Performance Analysis</h3>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                                    <tr>
+                                        <th data-ui="ui.dashboard.col.team_performance_analysis.kpi" class="p-2">KPI</th>
+                                        <th data-ui="ui.dashboard.col.team_performance_analysis.team_average" class="p-2 text-center">Team Average</th>
+                                        <th data-ui="ui.dashboard.col.team_performance_analysis.agents_threshold" class="p-2 text-center">Agents ≥ Threshold</th>
+                                        <th data-ui="ui.dashboard.col.team_performance_analysis.below_3_occurrences" class="p-2 text-center">Below-3 Occurrences</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamDashboardAnalysisBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 2. Highest Achievers -->
+                        <div data-ui="ui.dashboard.sec.highest_achievers">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-900 bg-blue-50 p-2 rounded border-l-4 border-blue-600 mb-2">Highest Achievers</h3>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-xs text-left">
+                                    <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                                        <tr>
+                                            <th data-ui="ui.dashboard.col.highest_achievers.agent" class="p-2">Agent</th>
+                                            <th data-ui="ui.dashboard.col.highest_achievers.overall_avg" class="p-2 text-center">Overall Avg</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teamDashboardAchieversBody" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 3. Highest Outliers -->
+                        <div data-ui="ui.dashboard.sec.highest_outliers">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-50 p-2 rounded border-l-4 border-amber-600 mb-2">Highest Outliers</h3>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-xs text-left">
+                                    <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                                        <tr>
+                                            <th data-ui="ui.dashboard.col.highest_outliers.agent" class="p-2">Agent</th>
+                                            <th data-ui="ui.dashboard.col.highest_outliers.overall_avg" class="p-2 text-center">Overall Avg</th>
+                                            <th data-ui="ui.dashboard.col.highest_outliers.deviation" class="p-2 text-center">Deviation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teamDashboardOutliersBody" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 4. Most Achieved KPIs -->
+                        <div data-ui="ui.dashboard.sec.most_achieved_kpi_s">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-teal-900 bg-teal-50 p-2 rounded border-l-4 border-teal-600 mb-2">Most Achieved KPI's</h3>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-xs text-left">
+                                    <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                                        <tr>
+                                            <th data-ui="ui.dashboard.col.most_achieved_kpi_s.kpi" class="p-2">KPI</th>
+                                            <th data-ui="ui.dashboard.col.most_achieved_kpi_s.team_average" class="p-2 text-center">Team Average</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teamDashboardBestKpiBody" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 5. Highest Not Achieved KPIs -->
+                        <div data-ui="ui.dashboard.sec.highest_not_achieved_kpi_s">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-red-900 bg-red-50 p-2 rounded border-l-4 border-red-600 mb-2">Highest Not Achieved KPI's</h3>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-xs text-left">
+                                    <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                                        <tr>
+                                            <th data-ui="ui.dashboard.col.highest_not_achieved_kpi_s.kpi" class="p-2">KPI</th>
+                                            <th data-ui="ui.dashboard.col.highest_not_achieved_kpi_s.below_3_occurrences" class="p-2 text-center">Below-3 Occurrences</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teamDashboardWorstKpiBody" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- =================== End Team Dashboard Tab =================== -->
+
+
+    <!-- ===================== 3. Actions Management Tab ===================== -->
+    <div id="actionsTab" class="hidden max-w-5xl mx-auto space-y-5">
+        <div class="flex flex-wrap justify-between items-center gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Actions Management</h1>
+                <p class="text-xs text-slate-500">Formal action tracking, disciplinary escalation, and progressive matrix records.</p>
+            </div>
+            <div class="flex flex-wrap gap-2.5">
+                <button data-perm="coaching.view" onclick="openAgentSelectModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Coaching Sheets</button>
+                <button data-perm="dashboard.view" onclick="showTeamDashboardTab()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Team Dashboard</button>
+                <button data-perm="employees.view" onclick="showOrgChartTab()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Org Chart</button>
+                <button data-perm="admin.panel" onclick="showControlPanelTab()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Control Panel</button>
+                <button data-perm="actions.create" onclick="openActionForm(null)" class="bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    New Action
+                </button>
+            </div>
+        </div>
+
+        <div class="flex gap-1 border-b border-slate-300 no-print">
+            <button type="button" data-subtab-group="actions" data-subtab="log" data-panel="actionsSubLog" onclick="showActionsSubTab('log')" class="px-4 py-2 text-sm -mb-px border-b-2 border-transparent text-slate-500 font-medium">Actions Log</button>
+            <button type="button" data-perm="rolling.view" data-subtab-group="actions" data-subtab="rolling" data-panel="actionsSubRolling" onclick="showActionsSubTab('rolling')" class="px-4 py-2 text-sm -mb-px border-b-2 border-transparent text-slate-500 font-medium">Agents Rolling Records</button>
+        </div>
+
+        <div id="actionsSubLog">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200 space-y-4">
+                <div class="flex flex-wrap items-center gap-3 no-print">
+                    <input data-ui="ui.actions.flt.actionssearchinput" type="text" id="actionsSearchInput" oninput="renderActionsList()" placeholder="Search by employee name..." class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[220px] outline-none focus:ring-2 focus:ring-orange-500">
+                    <select data-ui="ui.actions.flt.actionslevelfilter" id="actionsLevelFilter" onchange="renderActionsList()" class="border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">All Levels</option>
+                        <option>General</option>
+                        <option>Bad Performance</option>
+                        <option>Gross</option>
+                    </select>
+                    <select data-ui="ui.actions.flt.actionsdecisionfilter" id="actionsDecisionFilter" onchange="renderActionsList()" class="border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">All Decisions</option>
+                        <option>Memo</option>
+                        <option>Verbal</option>
+                        <option>Written</option>
+                        <option>Termination Notice</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                            <tr>
+                                <th class="p-2">Employee Name</th>
+                                <th class="p-2">Type</th>
+                                <th class="p-2">Date</th>
+                                <th class="p-2">Description of Event</th>
+                                <th class="p-2">Level</th>
+                                <th class="p-2">Decision</th>
+                                <th data-ui="ui.actions.col.actions.actions" class="p-2 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="actionsListBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="actionsSubRolling" class="hidden space-y-5">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200 space-y-4">
+                <div id="rollingRecordsEmptyState" class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
+                    <p class="text-sm text-slate-600 font-medium mb-1">No performance data loaded yet.</p>
+                    <p class="text-xs text-slate-500 mb-4">Upload the coaching workbook via Import Monthly Performance in the Coaching Sheets tab.</p>
+                    <button data-perm="data.import" onclick="goToImportMonthlyPerformance()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-xs">Go to Import Monthly Performance</button>
+                </div>
+
+                <div id="rollingRecordsResults" class="hidden space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3 no-print">
+                        <input data-ui="ui.rolling.flt.rollingrecordssearchinput" type="text" id="rollingRecordsSearchInput" oninput="renderRollingRecords()" placeholder="Search by agent name..." class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[220px] outline-none focus:ring-2 focus:ring-cyan-600">
+                        <div class="flex items-center gap-2">
+                            <button data-perm="actions.create" onclick="runAutoCreateActionsForAllAtRiskAgents(true)" class="bg-white border border-orange-600 text-orange-700 hover:bg-orange-50 text-xs font-medium px-3.5 py-2 rounded-lg transition whitespace-nowrap shadow-xs">Preview Actions</button>
+                            <button data-perm="actions.create" onclick="runAutoCreateActionsForAllAtRiskAgents()" class="bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium px-3.5 py-2 rounded-lg transition whitespace-nowrap shadow-xs">Generate Actions from Matrix</button>
+                            <!-- Info Tooltip for Action Engine Matrix Generation -->
+                            <span class="info-tooltip-wrap no-print pdf-exclude">
+                                <button type="button" class="info-tooltip-btn" aria-label="About Action Matrix Generation" tabindex="0">i</button>
+                                <span role="tooltip" class="tooltip-popup">
+                                    Generates one separate action for each KPI breaching the rolling 6-month threshold (&lt;2.5). The occurrence number is matched against the Disciplinary Matrix for the agent's Employee Type.
+                                </span>
+                            </span>
+                        </div>
+                        <p id="rollingRecordsWindowNote" class="text-[11px] text-slate-500 font-medium w-full"></p>
+                    </div>
+
+                    <p id="rollingRecordsAutoCreateStatus" class="text-[11px] text-orange-700 font-medium no-print"></p>
+                    <div id="rollingEngineReport" class="hidden border border-slate-200 rounded-lg p-3 bg-white no-print"></div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                                <tr id="rollingRecordsHeaderRow">
+                                    <th data-ui="ui.rolling.col.rollingrecords.agent" class="p-2">Agent</th>
+                                    <th data-ui="ui.rolling.col.rollingrecords.pid" class="p-2">PID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rollingRecordsBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- =================== End Actions Management Tab =================== -->
+
+
+    <!-- ===================== 4. Organizational Chart Tab ===================== -->
+    <div id="orgChartTab" class="hidden max-w-5xl mx-auto space-y-5">
+        <div class="flex flex-wrap justify-between items-center gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Organizational Chart</h1>
+                <p class="text-xs text-slate-500">Employee profiles, hierarchy relationships, roles, and relational PID directory.</p>
+            </div>
+            <div class="flex flex-wrap gap-2.5">
+                <button data-perm="coaching.view" onclick="openAgentSelectModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Coaching Sheets</button>
+                <button data-perm="dashboard.view" onclick="showTeamDashboardTab()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Team Dashboard</button>
+                <button data-perm="actions.view" onclick="showActionsTab()" class="bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Actions Management</button>
+                <button data-perm="admin.panel" onclick="showControlPanelTab()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Control Panel</button>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 md:p-10 rounded-xl shadow-md border border-slate-200 space-y-6">
+            <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-600 font-medium">Employee profiles are keyed by <span class="font-bold text-slate-900">PID</span>. Coaching sheets, actions, and performance trends bind automatically.</span>
+            </div>
+
+            <form data-perm-any="employees.create employees.edit" id="employeeForm" novalidate onsubmit="return submitEmployeeForm(event)" class="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                <input type="hidden" id="empEditPid">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Agent Name</label>
+                    <input type="text" id="empName" maxlength="80" autocomplete="off" placeholder="John Doe" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="name"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">PID / Person ID</label>
+                    <input type="text" id="empPid" maxlength="30" autocomplete="off" placeholder="EMP-10923" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none read-only:bg-slate-100">
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="pid"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Email</label>
+                    <input type="email" id="empEmail" maxlength="120" autocomplete="off" placeholder="agent@company.com" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="email"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Team Leader / Manager</label>
+                    <input type="text" id="empLeader" list="empLeaderList" maxlength="80" autocomplete="off" placeholder="Pick or type a name" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="teamLeader"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Contract Type</label>
+                    <select id="empContract" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="">Select…</option>
+                        <option>Full-Time</option>
+                        <option>Part-Time</option>
+                        <option>Vendor</option>
+                        <option>Off-Payroll</option>
+                        <option>Outsourced</option>
+                        <option>Perm/OS</option>
+                    </select>
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="contractType"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Contract Status</label>
+                    <select id="empStatus" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="">Select…</option>
+                        <option>Active</option>
+                        <option>Probation</option>
+                        <option>On Leave</option>
+                        <option>Notice Period</option>
+                        <option>Resigned</option>
+                        <option>Terminated</option>
+                    </select>
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="contractStatus"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Join Date</label>
+                    <input type="date" id="empJoin" min="1990-01-01" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="joinDate"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Department</label>
+                    <input type="text" id="empDept" list="empDeptList" maxlength="80" autocomplete="off" placeholder="Customer Care" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="department"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Sub-Department</label>
+                    <input type="text" id="empSubDept" list="empSubDeptList" maxlength="80" autocomplete="off" placeholder="Mobile Telesales" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="subDepartment"></p>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Agent Role</label>
+                    <select id="empRole" class="w-full border border-slate-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="">Select…</option>
+                    </select>
+                    <p class="text-[11px] text-red-600 mt-1 min-h-[14px]" data-emp-err="role"></p>
+                </div>
+
+                <div id="empCustomFields" class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1"></div>
+                
+                <div class="md:col-span-3 flex flex-wrap items-center gap-3 pt-1">
+                    <button type="submit" id="empSubmitBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-5 py-2 rounded-lg transition shadow-xs">Add Employee</button>
+                    <button type="button" onclick="resetEmployeeForm()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg transition">Clear</button>
+                    <span id="empFormStatus" class="text-xs text-emerald-700 font-medium"></span>
+                </div>
+            </form>
+
+            <datalist id="empLeaderList"></datalist>
+            <datalist id="empDeptList"></datalist>
+            <datalist id="empSubDeptList"></datalist>
+
+            <!-- Bulk Sync Section with Info Tooltip -->
+            <div data-perm="employees.create" class="flex flex-wrap items-center gap-3 text-xs border border-dashed border-slate-300 rounded-lg p-3.5 no-print bg-slate-50/50">
+                <span class="font-bold text-slate-700 flex items-center">
+                    Bulk add / sync from master list
+                    <span class="info-tooltip-wrap ml-1.5 no-print pdf-exclude">
+                        <button type="button" class="info-tooltip-btn" aria-label="About Bulk Sync" tabindex="0">i</button>
+                        <span role="tooltip" class="tooltip-popup">
+                            Upload a roster file. People already in the chart (matched by PID, then email) are never modified, moved, or duplicated. Only new hires are appended safely after preview.
+                        </span>
+                    </span>
+                </span>
+                <button type="button" onclick="document.getElementById('orgSyncFile').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg transition shadow-xs">Upload CSV / Excel…</button>
+                <button type="button" onclick="downloadOrgSyncTemplate()" class="underline text-slate-600 hover:text-slate-900 font-medium">Download template</button>
+                <input type="file" id="orgSyncFile" accept=".csv,.xlsx,.xls" class="hidden" onchange="onOrgSyncFile(this)">
+                <span id="orgSyncStatus" class="text-emerald-700 font-medium"></span>
+            </div>
+
+            <div data-perm="employees.create" id="empUnlinkedBox" class="hidden border border-amber-300 bg-amber-50 rounded-lg p-3 text-xs space-y-2"></div>
+
+            <div class="space-y-3">
+                <input data-ui="ui.org.flt.empsearchinput" type="text" id="empSearchInput" oninput="renderEmployeeList()" placeholder="Search by name, PID, email, or team leader..." class="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full md:w-96 outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs">
+                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                            <tr>
+                                <th class="p-2">PID</th>
+                                <th class="p-2">Agent</th>
+                                <th class="p-2">Email</th>
+                                <th class="p-2">Team Leader</th>
+                                <th class="p-2">Contract</th>
+                                <th class="p-2">Department</th>
+                                <th class="p-2">Role</th>
+                                <th class="p-2">Joined</th>
+                                <th data-ui="ui.org.col.emp.linked_data" class="p-2">Linked Data</th>
+                                <th data-ui="ui.org.col.emp.actions" class="p-2 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empListBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- =================== End Organizational Chart Tab =================== -->
+
+
+    <!-- ===================== 5. Control Panel Tab ===================== -->
+    <div id="controlPanelTab" class="hidden max-w-6xl mx-auto space-y-5">
+        <div class="flex flex-wrap justify-between items-center gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Control Panel</h1>
+                <p class="text-xs text-slate-500">Administrator governance: schema field builder, role-based visibility, and audit trail.</p>
+            </div>
+            <div class="flex flex-wrap gap-2.5">
+                <button data-perm="coaching.view" onclick="openAgentSelectModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Coaching Sheets</button>
+                <button data-perm="dashboard.view" onclick="showTeamDashboardTab()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Team Dashboard</button>
+                <button data-perm="actions.view" onclick="showActionsTab()" class="bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Actions Management</button>
+                <button data-perm="employees.view" onclick="showOrgChartTab()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Org Chart</button>
+                <button data-perm="admin.panel" onclick="showControlPanelTab()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg shadow-xs transition">Control Panel</button>
+            </div>
+        </div>
+
+        <div class="flex gap-1 border-b border-slate-300 no-print" role="tablist">
+            <button type="button" role="tab" data-subtab-group="cpanel" data-subtab="fields" data-panel="cpFieldsPanel" onclick="showCpSubTab('fields')" class="px-4 py-2 text-sm -mb-px border-b-2 border-transparent text-slate-500 font-medium">Field Builder</button>
+            <button type="button" role="tab" data-subtab-group="cpanel" data-subtab="builtin" data-panel="cpBuiltinPanel" onclick="showCpSubTab('builtin')" class="px-4 py-2 text-sm -mb-px border-b-2 border-transparent text-slate-500 font-medium">Built-in Fields</button>
+            <button type="button" role="tab" data-subtab-group="cpanel" data-subtab="roles" data-panel="cpRolesPanel" onclick="showCpSubTab('roles')" class="px-4 py-2 text-sm -mb-px border-b-2 border-transparent text-slate-500 font-medium">Roles &amp; Permissions</button>
+            <button type="button" role="tab" data-subtab-group="cpanel" data-subtab="audit" data-panel="cpAuditPanel" onclick="showCpSubTab('audit')" class="px-4 py-2 text-sm -mb-px border-b-2 border-transparent text-slate-500 font-medium">Audit Log</button>
+        </div>
+
+        <div id="cpFieldsPanel" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200 space-y-4">
+            <div id="cpFieldsRoot"></div>
+        </div>
+
+        <div id="cpBuiltinPanel" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200 space-y-4">
+            <div id="cpBuiltinRoot"></div>
+        </div>
+
+        <div id="cpRolesPanel" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200 space-y-4">
+            <div id="cpRolesRoot"></div>
+        </div>
+
+        <div id="cpAuditPanel" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200 space-y-4">
+            <div id="cpAuditRoot"></div>
+        </div>
+    </div>
+    <!-- =================== End Control Panel Tab =================== -->
+
+
+    <!-- ===================== MODALS & DIALOGS ===================== -->
+
+    <!-- Field Editor Modal -->
+    <div id="fieldEditorModal" role="dialog" aria-modal="true" aria-labelledby="fieldEditorTitle" class="no-print fixed inset-0 bg-slate-900/60 z-[70] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h2 id="fieldEditorTitle" class="text-lg font-bold text-slate-900">Add field</h2>
+                <button type="button" onclick="closeFieldEditor()" aria-label="Close" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+            </div>
+            <div id="fieldEditorBody" class="p-6 overflow-y-auto text-xs space-y-4"></div>
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button type="button" onclick="closeFieldEditor()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="button" id="fieldEditorSaveBtn" onclick="saveFieldEditor()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save field</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Field Delete Confirmation Modal -->
+    <div id="fieldDeleteModal" role="dialog" aria-modal="true" aria-labelledby="fieldDeleteTitle" class="no-print fixed inset-0 bg-slate-900/60 z-[75] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 id="fieldDeleteTitle" class="text-lg font-bold text-red-700">Delete field?</h2>
+            <div id="fieldDeleteBody" class="text-sm text-slate-700 space-y-2"></div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" id="fieldDeleteCancelBtn" onclick="closeFieldDelete()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="button" onclick="confirmFieldDelete()" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Delete field</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Reassignment Modal -->
+    <div id="roleReassignModal" role="dialog" aria-modal="true" aria-labelledby="roleReassignTitle" class="no-print fixed inset-0 bg-slate-900/60 z-[75] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 id="roleReassignTitle" class="text-lg font-bold text-slate-900">Reassign people first</h2>
+            <p class="text-sm text-slate-700">These roles are being deleted but employees still hold them. Choose the role each group moves to.</p>
+            <div id="roleReassignBody" class="space-y-3 text-sm"></div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeRoleReassign()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="button" onclick="confirmRoleReassign()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Reassign &amp; save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Org Sync Modal -->
+    <div id="orgSyncModal" role="dialog" aria-modal="true" aria-labelledby="orgSyncTitle" class="no-print fixed inset-0 bg-slate-900/60 z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200">
+                <h2 id="orgSyncTitle" class="text-lg font-bold text-slate-900">Review before adding</h2>
+                <p id="orgSyncFileName" class="text-xs text-slate-500"></p>
+            </div>
+            <div id="orgSyncBody" class="px-6 py-4 overflow-y-auto text-xs space-y-3"></div>
+            <div class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+                <button type="button" onclick="closeOrgSyncModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="button" id="orgSyncConfirmBtn" onclick="confirmOrgSync()" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Add new employees</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Database Confirmation Modal -->
+    <div id="deleteDbModal" role="dialog" aria-modal="true" aria-labelledby="deleteDbTitle" class="no-print fixed inset-0 bg-slate-900/60 z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 id="deleteDbTitle" class="text-lg font-bold text-red-700">Delete database?</h2>
+            <p class="text-sm text-slate-700">Are you sure you want to delete all uploaded performance and action data? This action cannot be undone.</p>
+            <ul id="deleteDbList" class="text-xs text-slate-600 list-disc pl-5 space-y-1"></ul>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="deleteDbCancelBtn" onclick="closeDeleteDbModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button id="deleteDbConfirmBtn" onclick="confirmDeleteDatabase()" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Delete Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Form Modal -->
+    <div id="actionFormModal" class="no-print fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-3 border-b border-slate-200 no-print">
+                <div>
+                    <h2 id="actionFormTitle" class="text-lg font-bold text-slate-900">New Action</h2>
+                    <p class="text-xs text-slate-500 instruction-hint pdf-exclude">Formal disciplinary action record according to progressive governance policy.</p>
+                </div>
+                <button onclick="closeActionModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none px-2" aria-label="Close">&times;</button>
+            </div>
+
+            <div id="actionFormPdfContent" class="flex-1 overflow-y-auto text-xs">
+                <input type="hidden" id="actionFormId">
+
+                <div class="border-b-2 border-slate-900 px-6 py-2 flex items-center gap-3">
+                    <label class="font-bold text-slate-900 whitespace-nowrap">Employee Name</label>
+                    <input type="text" id="actionFormEmployeeName" list="actionsEmployeeDatalist" placeholder="Start typing or pick from the roster" onchange="syncActionManagerField(); applyMatrixDecisionSuggestion()"
+                        class="flex-1 bg-transparent border-0 border-b border-dotted border-slate-400 text-blue-700 font-medium px-1 py-1 outline-none focus:border-orange-500">
+                    <datalist id="actionsEmployeeDatalist"></datalist>
+                    <label class="font-bold text-slate-900 whitespace-nowrap ml-4">Date</label>
+                    <span id="actionFormDateDisplay" class="text-slate-700 whitespace-nowrap font-medium"></span>
+                </div>
+
+                <div class="border-b border-slate-200 px-6 py-2 flex items-center gap-3">
+                    <label class="font-bold text-slate-900 whitespace-nowrap w-36">Manager Name</label>
+                    <input type="text" id="actionFormManagerName" class="flex-1 bg-transparent border-0 border-b border-dotted border-slate-400 text-blue-700 font-medium px-1 py-1 outline-none focus:border-orange-500">
+                </div>
+                <div class="border-b border-slate-200 px-6 py-2 flex items-center gap-3">
+                    <label class="font-bold text-slate-900 whitespace-nowrap w-36">Department</label>
+                    <input type="text" id="actionFormDepartment" class="flex-1 bg-transparent border-0 border-b border-dotted border-slate-400 text-blue-700 font-medium px-1 py-1 outline-none focus:border-orange-500">
+                </div>
+                <div class="border-b-2 border-slate-900 px-6 py-2 flex items-center gap-3">
+                    <label class="font-bold text-slate-900 whitespace-nowrap w-36">Sub-Department</label>
+                    <input type="text" id="actionFormSubDepartment" class="flex-1 bg-transparent border-0 border-b border-dotted border-slate-400 text-blue-700 font-medium px-1 py-1 outline-none focus:border-orange-500">
+                    <label class="font-bold text-slate-900 whitespace-nowrap ml-4">Employee Type</label>
+                    <select id="actionFormEmployeeType" onchange="applyMatrixDecisionSuggestion()" class="bg-transparent border-0 border-b border-dotted border-slate-400 text-blue-700 font-medium px-1 py-1 outline-none focus:border-orange-500">
+                        <option value="">— Select —</option>
+                        <option>Perm/OS</option>
+                        <option>Off-Payroll</option>
+                        <option>Outsourced</option>
+                    </select>
+                </div>
+
+                <div class="border-b-2 border-slate-900 px-6 py-3">
+                    <label class="block font-bold text-blue-800 mb-1.5">Description of event</label>
+                    <select id="actionFormDescription" onchange="applyMatrixDecisionSuggestion()" class="w-full bg-transparent border border-dashed border-slate-300 rounded-sm text-blue-700 font-medium px-2 py-2 outline-none focus:border-orange-500">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+
+                <div class="border-b-2 border-slate-900 px-6 py-3">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="font-bold text-blue-800">Date of incident</label>
+                        <button type="button" onclick="addIncidentDateRow()" class="no-print pdf-exclude text-orange-700 hover:text-orange-900 font-medium">+ Add month</button>
+                    </div>
+                    <div class="flex items-center gap-2 text-blue-800 font-bold border-b border-dotted border-slate-400 pb-1 mb-1.5 max-w-xs">
+                        <span class="flex-1">Month</span>
+                        <span class="w-24">Year</span>
+                        <span class="w-14 no-print pdf-exclude"></span>
+                    </div>
+                    <div id="actionFormIncidentDates" class="space-y-1.5 max-w-xs"></div>
+                </div>
+
+                <div class="border-b border-slate-200 px-6 py-2 flex items-center gap-3">
+                    <label class="font-bold text-slate-900 whitespace-nowrap w-36">Level of incident</label>
+                    <select id="actionFormLevel" class="flex-1 bg-transparent border-0 border-b border-dotted border-slate-400 text-blue-700 font-medium px-1 py-1 outline-none focus:border-orange-500 max-w-[220px]">
+                        <option value="">— Select —</option>
+                        <option>General</option>
+                        <option>Bad Performance</option>
+                        <option>Gross</option>
+                    </select>
+                </div>
+
+                <div class="border-b-2 border-slate-900 px-6 py-2">
+                    <div class="flex items-center gap-3">
+                        <label class="font-bold text-slate-900 whitespace-nowrap w-36 flex items-center">
+                            Decision
+                            <!-- Interactive Info Tooltip -->
+                            <span class="info-tooltip-wrap ml-1.5 no-print pdf-exclude">
+                                <button type="button" class="info-tooltip-btn" aria-label="About Action Decision" tabindex="0">i</button>
+                                <span role="tooltip" class="tooltip-popup">
+                                    Suggested automatically from the Disciplinary Matrix by matching Description of Event, Employee Type, and incident history count.
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="actionFormDecision" list="actionDecisionDatalist" placeholder="— Select or type —"
+                            class="flex-1 bg-transparent border-0 border-b border-dotted border-slate-400 text-blue-700 font-medium px-1 py-1 outline-none focus:border-orange-500 max-w-[320px]">
+                        <datalist id="actionDecisionDatalist"></datalist>
+                    </div>
+                    <p id="actionDecisionHint" class="no-print instruction-hint pdf-exclude text-[11px] text-slate-500 mt-1 ml-36 pl-3"></p>
+                </div>
+
+                <div class="border-b-2 border-slate-900 px-6 py-3">
+                    <label class="block font-bold text-slate-900 mb-1.5">Action plan</label>
+                    <textarea id="actionFormPlan" rows="4" class="w-full bg-transparent border border-dashed border-slate-300 rounded-sm text-blue-700 font-medium px-2 py-2 outline-none focus:border-orange-500"></textarea>
+                </div>
+
+                <div id="actionFormCustomWrap" class="px-6 py-3 hidden">
+                    <label class="block font-bold text-slate-900 mb-1.5">Additional Information</label>
+                    <div id="actionFormCustomFields" class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1"></div>
+                </div>
+
+                <div class="px-6 py-3">
+                    <label class="block font-bold text-slate-900 mb-1.5">Comments</label>
+                    <textarea id="actionFormComments" rows="3" class="w-full bg-transparent border border-dashed border-slate-300 rounded-sm text-blue-700 font-medium px-2 py-2 outline-none focus:border-orange-500"></textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 no-print">
+                <button onclick="closeActionModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button onclick="saveActionForm()" class="bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-xs">Save Action</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disciplinary Matrix Modal -->
+    <div id="matrixModal" class="no-print fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Disciplinary Matrix</h2>
+                    <p class="text-xs text-slate-500">Progressive disciplinary steps by category and contract type.</p>
+                </div>
+                <button onclick="closeMatrixModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none px-2" aria-label="Close">&times;</button>
+            </div>
+
+            <div id="matrixListView" class="flex-1 overflow-y-auto">
+                <div class="px-6 py-3 flex flex-wrap items-center gap-3 border-b border-slate-100">
+                    <input data-ui="ui.matrix.flt.matrixsearchinput" type="text" id="matrixSearchInput" oninput="renderMatrixList()" placeholder="Search by category..." class="flex-1 min-w-[200px] border border-slate-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-slate-500">
+                    <button onclick="openMatrixForm(null)" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg transition">+ Add Entry</button>
+                    <button onclick="resetMatrixToDefaults()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-medium px-4 py-2 rounded-lg transition">Reset to Reference</button>
+                </div>
+                <div class="px-6 py-3">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                            <tr>
+                                <th data-ui="ui.matrix.col.matrix.category_description_of_event" class="p-2">Category</th>
+                                <th data-ui="ui.matrix.col.matrix.employee_type" class="p-2">Employee Type</th>
+                                <th data-ui="ui.matrix.col.matrix.steps_by_occurrence" class="p-2">Steps (by occurrence)</th>
+                                <th data-ui="ui.matrix.col.matrix.actions" class="p-2 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrixListBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="matrixFormView" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 text-xs hidden">
+                <input type="hidden" id="matrixFormId">
+                <div data-ui="ui.matrix.fld.matrixformcategory">
+                    <label class="block font-semibold text-slate-700 mb-1">Category (Description of event) *</label>
+                    <input type="text" id="matrixFormCategory" list="matrixCategoryDatalist" placeholder="e.g. Quality - Critical Mistake" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-slate-500">
+                    <datalist id="matrixCategoryDatalist"></datalist>
+                </div>
+                <div data-ui="ui.matrix.fld.matrixformemployeetype">
+                    <label class="block font-semibold text-slate-700 mb-1">Employee Type *</label>
+                    <select id="matrixFormEmployeeType" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-slate-500">
+                        <option value="">— Select —</option>
+                        <option>Perm/OS</option>
+                        <option>Off-Payroll</option>
+                        <option>Outsourced</option>
+                    </select>
+                </div>
+                <div data-ui="ui.matrix.fld.steps">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block font-semibold text-slate-700">Steps, in order of occurrence</label>
+                        <button type="button" onclick="addMatrixStepRow()" class="text-slate-700 hover:text-slate-900 font-medium">+ Add step</button>
+                    </div>
+                    <div id="matrixFormSteps" class="space-y-1.5"></div>
+                </div>
+                <div data-ui="ui.matrix.fld.matrixformnotes">
+                    <label class="block font-semibold text-slate-700 mb-1">Notes</label>
+                    <textarea id="matrixFormNotes" rows="3" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-slate-500"></textarea>
+                </div>
+            </div>
+            <div id="matrixFormFooter" class="hidden items-center justify-end gap-3 px-6 py-4 border-t border-slate-200">
+                <button onclick="showMatrixListView()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                <button onclick="saveMatrixForm()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-xs">Save Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage KPI Library Modal -->
+    <div id="kpiModal" class="no-print fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Manage KPI Library</h2>
+                    <p class="text-xs text-slate-500">Configure metrics, targets, thresholds, equations, and SMART coaching guidance.</p>
+                </div>
+                <button onclick="closeKpiModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none px-2" aria-label="Close">&times;</button>
+            </div>
+
+            <!-- List View -->
+            <div id="kpiListView" class="flex-1 overflow-y-auto">
+                <div class="px-6 py-3 flex items-center justify-between border-b border-slate-100">
+                    <input data-ui="ui.kpi.flt.kpisearch" type="text" id="kpiSearch" placeholder="Filter KPIs by name or category..." oninput="renderKpiList()" class="text-xs border border-slate-300 rounded px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-purple-500 w-64">
+                    <button onclick="openKpiForm()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-3.5 py-2 rounded-lg transition flex items-center gap-1 shadow-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Add New KPI
+                    </button>
+                </div>
+                <div class="px-6 py-4">
+                    <div class="overflow-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-100 text-slate-700 font-semibold uppercase sticky top-0">
+                                <tr>
+                                    <th class="p-2">KPI Name</th>
+                                    <th class="p-2">Category</th>
+                                    <th class="p-2">Threshold</th>
+                                    <th class="p-2">Target</th>
+                                    <th class="p-2">Exceptional</th>
+                                    <th class="p-2">Weight</th>
+                                    <th data-ui="ui.kpi.col.kpi.actions" class="p-2 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiListBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form View (Add / Edit) -->
+            <div id="kpiFormView" class="flex-1 overflow-y-auto hidden">
+                <div class="px-6 py-4 space-y-3 text-xs">
+                    <input type="hidden" id="kpiFormId">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">KPI Name *</label>
+                            <input type="text" id="kpiFormName" placeholder="e.g. Quality Audit Score (%)" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Category</label>
+                            <input type="text" id="kpiFormCategory" placeholder="e.g. Quality, Efficiency, Compliance" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Threshold</label>
+                            <input type="text" id="kpiFormThreshold" placeholder="e.g. ≥ 85.0%" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Target</label>
+                            <input type="text" id="kpiFormTarget" placeholder="e.g. 90.0%" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Exceptional</label>
+                            <input type="text" id="kpiFormExceptional" placeholder="e.g. ≥ 97.0%" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Weight (%)</label>
+                            <input type="number" id="kpiFormWeight" step="0.1" min="0" max="100" placeholder="e.g. 20" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Description</label>
+                        <textarea id="kpiFormDescription" rows="2" placeholder="What this KPI measures..." class="w-full border border-slate-300 rounded p-2 outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Equation</label>
+                        <input type="text" id="kpiFormEquation" placeholder="e.g. (Passed Audit Points / Total Audit Points) x 100" class="w-full border border-slate-300 rounded px-3 py-1.5 outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">WHAT Calculation</label>
+                        <textarea id="kpiFormWhatCalculation" rows="2" placeholder="How and where this figure is calculated / sourced from..." class="w-full border border-slate-300 rounded p-2 outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Coaching Notes</label>
+                        <textarea id="kpiFormCoachingNotes" rows="2" placeholder="Guidance for coaches when discussing this KPI with an agent..." class="w-full border border-slate-300 rounded p-2 outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                    </div>
+                    <p id="kpiFormError" class="text-xs text-red-600 hidden"></p>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 border-t border-slate-200 flex justify-end gap-3">
+                <span id="kpiListFooter">
+                    <button onclick="closeKpiModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Close</button>
+                </span>
+                <span id="kpiFormFooter" class="hidden gap-3 flex">
+                    <button onclick="closeKpiForm()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Cancel</button>
+                    <button onclick="saveKpiForm()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-xs">Save KPI</button>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Monthly Performance Modal -->
+    <div id="perfImportModal" class="no-print fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-lg font-bold text-slate-900">Import Monthly Performance</h2>
+                    <!-- Info Tooltip for Import Guidance -->
+                    <span class="info-tooltip-wrap no-print pdf-exclude">
+                        <button type="button" class="info-tooltip-btn" aria-label="About Monthly Data Import" tabindex="0">i</button>
+                        <span role="tooltip" class="tooltip-popup">
+                            Reads the "Paste Performance Here" tab of the coaching workbook. Monthly trends, scores below 3, and agent IDs populate automatically across all views.
+                        </span>
+                    </span>
+                </div>
+                <button onclick="closePerfImportModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none px-2" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="px-6 py-4 space-y-4 overflow-y-auto">
+                <div class="border-2 border-dashed border-slate-300 rounded-lg p-5 text-center bg-slate-50/50">
+                    <input type="file" id="perfImportFileInput" accept=".csv,.xlsx,.xls" class="hidden" onchange="handlePerfImportFile(event)">
+                    <button onclick="document.getElementById('perfImportFileInput').click()" class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-xs">
+                        Choose Excel Workbook
+                    </button>
+                    <p id="perfImportFileName" class="text-xs text-slate-500 mt-2">No file selected.</p>
+                </div>
+                <p id="perfImportError" class="text-xs text-red-600 hidden"></p>
+                <p id="perfImportSuccess" class="text-xs text-emerald-700 hidden font-medium"></p>
+            </div>
+
+            <div class="px-6 py-3 border-t border-slate-200 flex justify-end gap-3">
+                <button id="perfImportConfirmBtn" onclick="confirmPerfImport()" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-xs">Confirm Import</button>
+                <button onclick="closePerfImportModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Selection Modal (Coaching Sheets) -->
+    <div id="agentSelectModal" class="no-print fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Coaching Sheets Directory</h2>
+                    <p class="text-xs text-slate-500">Open an agent's coaching sheet, view a selected batch, or perform bulk PDF extract / email.</p>
+                </div>
+                <button onclick="closeAgentSelectModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none px-2" aria-label="Close">&times;</button>
+            </div>
+
+            <div id="agentSelectEmptyState" class="hidden px-6 py-10 text-center">
+                <p class="text-sm text-slate-500 mb-4">No performance data has been imported yet, so there's no agent list to show.</p>
+                <div class="flex justify-center gap-3">
+                    <button onclick="closeAgentSelectModal(); goToImportMonthlyPerformance();" class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Import Monthly Performance</button>
+                    <button onclick="exitViewSelected(); closeAgentSelectModal(); showCoachingFormTab();" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition">Open Blank Coaching Sheet</button>
+                </div>
+            </div>
+
+            <div id="agentSelectListWrap" class="px-6 py-4 space-y-3 overflow-y-auto flex-1">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="agentSelectAllCheckbox" onchange="toggleAgentSelectAll(this.checked)" class="rounded text-teal-600 focus:ring-teal-500">
+                        Select All
+                    </label>
+                    <input type="text" id="agentSelectFilter" placeholder="Filter by name..." oninput="renderAgentSelectList()" class="text-xs border border-slate-300 rounded px-2.5 py-1 outline-none focus:ring-2 focus:ring-blue-500 w-48">
+                </div>
+                <div class="overflow-auto border border-slate-200 rounded-lg max-h-80">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-semibold uppercase sticky top-0">
+                            <tr>
+                                <th data-ui="ui.agents.col.agentselecttable.select" class="p-2 w-8"></th>
+                                <th data-ui="ui.agents.col.agentselecttable.agent" class="p-2">Agent</th>
+                                <th data-ui="ui.agents.col.agentselecttable.pid" class="p-2">PID</th>
+                                <th data-ui="ui.agents.col.agentselecttable.email" class="p-2">Email</th>
+                                <th data-ui="ui.agents.col.agentselecttable.months" class="p-2">Months</th>
+                                <th data-ui="ui.agents.col.agentselecttable.action" class="p-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentSelectTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <p id="agentBulkStatus" class="text-xs hidden"></p>
+                <div id="agentBulkProgress" class="hidden bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-2"></div>
+            </div>
+
+            <div class="px-6 py-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <span id="agentSelectCount" class="text-xs text-slate-500 font-medium">0 selected</span>
+                <div class="flex flex-wrap gap-2.5">
+                    <button id="agentViewSelectedBtn" onclick="viewSelectedAgents()" disabled class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-xs">View Selected</button>
+                    <button data-perm="coaching.export" id="agentExtractBtn" onclick="bulkExtractSheets()" disabled class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-xs">Extract Sheets</button>
+                    <button data-perm="coaching.edit" id="agentBulkEmailBtn" onclick="bulkSendEmails()" disabled class="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-xs">Send Bulk Emails</button>
+                    <button onclick="closeAgentSelectModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium px-4 py-2 rounded-lg transition">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <datalist id="coachingAgentNameList"></datalist>
+    <div id="root"></div>
+
+    <!-- Application Entry Point -->
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

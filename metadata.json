@@ -1,0 +1,6 @@
+{
+  "name": "COPC Agent Coaching & Performance Management",
+  "description": "Standardized COPC CX coaching sheet generator, team performance dashboard, organizational chart, actions management, and disciplinary matrix governance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

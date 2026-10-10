@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+/* ============================================================
+   COPC Agent Coaching Form & Performance Management Styles
+   ============================================================ */
+
+/* Tooltip & Interactive UI Hint System */
+.info-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.info-tooltip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: inherit;
+  line-height: 1;
+  cursor: help;
+  transition: all 0.15s ease-in-out;
+}
+
+.info-tooltip-btn:hover,
+.info-tooltip-btn:focus {
+  background-color: #0d9488;
+  border-color: #0f766e;
+  color: #ffffff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.35);
+}
+
+.tooltip-popup {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  width: 18rem;
+  max-width: 85vw;
+  padding: 0.625rem 0.75rem;
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  font-weight: 400;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 60;
+  text-align: left;
+  white-space: normal;
+  word-break: normal;
+}
+
+.tooltip-popup::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+/* Show tooltip smoothly on hover or keyboard focus */
+.info-tooltip-wrap:hover .tooltip-popup,
+.info-tooltip-wrap:focus-within .tooltip-popup,
+.info-tooltip-btn:focus + .tooltip-popup {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+  pointer-events: auto;
+}
+
+/* Right-aligned variant for tooltips near right viewport edge */
+.tooltip-right {
+  left: auto;
+  right: -0.5rem;
+  transform: scale(0.95);
+}
+
+.info-tooltip-wrap:hover .tooltip-right,
+.info-tooltip-wrap:focus-within .tooltip-right,
+.info-tooltip-btn:focus + .tooltip-right {
+  transform: scale(1);
+}
+
+.tooltip-right::after {
+  left: auto;
+  right: 1rem;
+  transform: none;
+}
+
+/* Dynamic Field Transitions */
+.dynamic-field-row {
+  animation: fadeInField 0.2s ease-out;
+}
+
+@keyframes fadeInField {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   Print & PDF Generation Rules (Strict Hint & Tooltip Exclusion)
+   ============================================================ */
+@media print {
+  .no-print,
+  .instruction-hint,
+  .info-tooltip-wrap,
+  .tooltip-popup,
+  .pdf-exclude,
+  .help-text,
+  .btn-add-item,
+  [data-hint],
+  [role="tooltip"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+  }
+
+  .page-card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  input,
+  select,
+  textarea {
+    border: none !important;
+    border-bottom: 1px solid #999 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-left: 0 !important;
+  }
+
+  textarea {
+    resize: none;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
+}
+
+/* PDF Export Capture Mode (Applied around html2pdf capture) */
+.pdf-export-mode .no-print,
+.pdf-export-mode .instruction-hint,
+.pdf-export-mode .info-tooltip-wrap,
+.pdf-export-mode .tooltip-popup,
+.pdf-export-mode .pdf-exclude,
+.pdf-export-mode .help-text,
+.pdf-export-mode .btn-add-item,
+.pdf-export-mode button,
+.pdf-export-mode [data-hint],
+.pdf-export-mode [role="tooltip"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.pdf-export-mode .pdf-swapped-out {
+  display: none !important;
+}
+
+.rbac-hidden {
+  display: none !important;
+}

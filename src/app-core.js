@@ -12,6 +12,7 @@ import './lib/auth-session.js';
 import './lib/org-chart.js';
 import './lib/actions-management.js';
 import './lib/dashboard-import.js';
+import './lib/control-panel.js';
 
 import { isValidFieldContent, escapeHtml } from './lib/utils.js';
 import { guard, guardRoute, renderAccessUI } from './lib/auth-session.js';
@@ -117,6 +118,7 @@ export function showCpSubTab(sub) {
             btn?.classList.add("border-slate-900", "text-slate-900", "font-semibold");
             btn?.classList.remove("border-transparent", "text-slate-500");
             p?.classList.remove("hidden");
+            if (s === 'fields') window.renderFieldBuilder('coaching');
         } else {
             btn?.classList.remove("border-slate-900", "text-slate-900", "font-semibold");
             btn?.classList.add("border-transparent", "text-slate-500");
